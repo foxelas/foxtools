@@ -1,0 +1,13 @@
+numpy
+pandas
+scikit-learn
+matplotlib
+h5py
+scipy
+scikit-image
+mat73
+configparser
+tensorflow
+keras
+segmentation_models
+opencv-python
