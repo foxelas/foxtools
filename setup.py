@@ -28,8 +28,8 @@ setuptools.setup(
                       'scikit-image',
                       'mat73',
                       'configparser',
-                      'tensorflow',
-                      'keras',
+                      'tensorflow>=2.1.0',
+                      'keras>=2.2',
                       'segmentation_models',
                       'opencv-python',
                       ]

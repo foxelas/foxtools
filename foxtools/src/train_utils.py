@@ -7,9 +7,9 @@ import pathlib
 
 
 from contextlib import redirect_stdout
-from tensorflow.keras.optimizers import Adam, RMSprop
-from tensorflow.keras.losses import categorical_crossentropy, binary_crossentropy
-from tensorflow.keras.metrics import Recall, Precision, FalseNegatives, FalsePositives, TrueNegatives, TruePositives
+from keras.optimizers import Adam, RMSprop
+from keras.losses import categorical_crossentropy, binary_crossentropy
+from keras.metrics import Recall, Precision, FalseNegatives, FalsePositives, TrueNegatives, TruePositives
 import segmentation_models as sm
 from sklearn.metrics import roc_curve, auc
 from keras.utils.vis_utils import plot_model
@@ -36,8 +36,8 @@ def get_model_filename(suffix='', extension='txt', folder = None):
     if folder is not None:
         savedir = join(savedir, folder)
 
-    try: 
-        mkdir(savedir) 
+    try:
+        mkdir(savedir)
     except OSError as error: 
         pass
 
@@ -122,13 +122,13 @@ def compile_custom(framework, model, optimizerName = "Adam", learning_rate = 0.0
         optimizer = Adam(learning_rate=learning_rate)
 
     if lossFunction == "BCE+JC":
-        targetLoss = sm.losses.bce_jaccard_loss
+        target_loss = sm.losses.bce_jaccard_loss
     elif lossFunction == "BCE":
-        targetLoss = binary_crossentropy
+        target_loss = binary_crossentropy
     else: 
-        targetLoss = sm.losses.bce_jaccard_loss
+        target_loss = sm.losses.bce_jaccard_loss
         
-    model = compile_and_save_structure(framework, model, optimizer, learning_rate, targetLoss, decay)
+    model = compile_and_save_structure(framework, model, optimizer, learning_rate, target_loss, decay)
 
     return model 
 
@@ -142,17 +142,16 @@ def fit_model(framework, model, x_train, y_train, x_test, y_test, numEpochs = 20
         validation_data=(x_test, y_test),
         )
 
-
     folder = framework
     plot_history(history, folder)
 
     return model, history
 
 ####################################### Evaluation ####################
-def plot_history(history, folder = None):
+def plot_history(history_info, folder = None):
     fig = plt.figure(1)
-    plt.plot(history.history['loss'])
-    plt.plot(history.history['val_loss'])
+    plt.plot(history_info.history['loss'])
+    plt.plot(history_info.history['val_loss'])
     plt.title('model loss')
     plt.ylabel('loss')
     plt.xlabel('epoch')
@@ -163,10 +162,9 @@ def plot_history(history, folder = None):
 
     plt.show()
 
-
     fig = plt.figure(2)
-    plt.plot(history.history['iou_score'])
-    plt.plot(history.history['val_iou_score'])
+    plt.plot(history_info.history['iou_score'])
+    plt.plot(history_info.history['val_iou_score'])
     plt.title('IOU scores')
     plt.ylabel('iou score')
     plt.xlabel('epoch')
@@ -182,15 +180,15 @@ def visualize(hsi, gt, pred, folder = None, iou = None, suffix = None):
     plt.clf()
     plt.subplot(1,3,1)
     plt.title("Original")
-    plt.imshow(hsi_utils.get_display_image(hsi))
+    plt.imshow(fox_utils.get_display_image(hsi))
 
     plt.subplot(1,3,2)
     plt.title("Ground Truth")
     plt.imshow(gt)
 
     plt.subplot(1,3,3)
-    figTitle = "Prediction" if iou == None else "Prediction (" + str(iou) + "%)"
-    plt.title(figTitle)
+    fig_title = "Prediction" if iou is None else "Prediction (" + str(iou) + "%)"
+    plt.title(fig_title)
     plt.imshow(pred)
 
     filename = get_model_filename('v_' + suffix, 'png', folder)
@@ -214,14 +212,13 @@ def plot_roc(fpr, tpr, auc_val, model_name, folder):
     plt.clf()
     plt.plot([0, 1], [0, 1], 'k--')
     for (fpr_, tpr_, auc_val_, model_name_) in zip(fpr, tpr, auc_val, model_name):
-        plt.plot(fpr_, tpr_, label=model_name_ +' (area = {:.3f})'.format(auc_val_))
+        plt.plot(fpr_, tpr_, label=model_name_ + ' (area = {:.3f})'.format(auc_val_))
     plt.xlabel('False positive rate')
     plt.ylabel('True positive rate')
     plt.title('ROC curve')
 
     # legend
     plt.legend(bbox_to_anchor=(1.02, 1), loc='upper left')
-
 
     filename = get_model_filename('auc', 'png', folder)
     plt.savefig(filename, bbox_inches = 'tight')
@@ -235,7 +232,7 @@ def plot_roc(fpr, tpr, auc_val, model_name, folder):
     plt.ylim(0.8, 1)
     plt.plot([0, 1], [0, 1], 'k--')
     for (fpr_, tpr_, auc_val_, model_name_) in zip(fpr, tpr, auc_val, model_name):
-         plt.plot(fpr_, tpr_, label=model_name_ +' (area = {:.3f})'.format(auc_val_))
+        plt.plot(fpr_, tpr_, label=model_name_ + ' (area = {:.3f})'.format(auc_val_))
     # plt.plot(fpr_rf, tpr_rf, label='RF (area = {:.3f})'.format(auc_rf))
     plt.xlabel('False positive rate')
     plt.ylabel('True positive rate')
@@ -247,8 +244,8 @@ def plot_roc(fpr, tpr, auc_val, model_name, folder):
     plt.show()
 
 
-def calc_plot_roc(model, X_test, y_test, model_name, folder):
-    y_scores = model.predict(X_test).ravel()
+def calc_plot_roc(model, x_test, y_test, model_name, folder):
+    y_scores = model.predict(x_test).ravel()
     y_test = np.reshape(y_test.astype(int), (y_scores.shape[0],  1))
 
     fpr, tpr, thresholds_keras = roc_curve(y_test, y_scores)
@@ -273,49 +270,49 @@ def get_eval_metrics_and_settings(history, isValidation, optz, lr, ed, lossFun):
         target = [str('val_') + x for x in target]
     
     #print(history.history.keys())
-    evalDict =  {x: history.history[x][-1] for x in target}
-    evalDict["optimizer"] = optz
-    evalDict["learningRate"] = lr
-    evalDict["decay"] = ed
-    evalDict["lossFunction"] = lossFun
+    eval_dict = {x: history.history[x][-1] for x in target}
+    eval_dict["optimizer"] = optz
+    eval_dict["learningRate"] = lr
+    eval_dict["decay"] = ed
+    eval_dict["lossFunction"] = lossFun
 
-    return evalDict 
+    return eval_dict
 
 def evaluate_model(model, history, framework, folder, x_test, y_test):
-    trainEval = get_eval_metrics(history)
-    testEval = get_eval_metrics(history, True)
+    train_eval = get_eval_metrics(history)
+    test_eval = get_eval_metrics(history, True)
 
     [fpr_, tpr_, auc_val_] = calc_plot_roc(model, x_test, y_test, framework, folder)
 
-    return fpr_, tpr_, auc_val_, trainEval, testEval
+    return fpr_, tpr_, auc_val_, train_eval, test_eval
 
 from scipy.io import savemat
 
 def save_evaluate_model(model, history, framework, folder, x_test, y_test):
-    fpr_, tpr_, auc_val_, trainEval, testEval = evaluate_model(model, history, framework, folder, x_test, y_test)
+    fpr_, tpr_, auc_val_, train_eval, test_eval = evaluate_model(model, history, framework, folder, x_test, y_test)
 
-    save_text(trainEval, 'results_train', folder)
-    save_text(testEval, 'results_test', folder)
+    save_text(train_eval, 'results_train', folder)
+    save_text(test_eval, 'results_test', folder)
     
     filename = get_model_filename('0_performance', 'mat', folder)
     
-    mdic = {"fpr_": fpr_, "tpr_": tpr_, "auc_val_": auc_val_, "history": history.history, "trainEval": trainEval, "testEval": testEval}
+    mdic = {"fpr_": fpr_, "tpr_": tpr_, "auc_val_": auc_val_, "history": history.history, "train_eval": train_eval, "test_eval": test_eval}
     savemat(filename, mdic)
 
     print("Saved 0_performance.mat file.")
     return fpr_, tpr_, auc_val_
 
 
-def save_evaluate_model_folds(folder, fpr_, tpr_, auc_val_, trainEval, testEval, history):   
+def save_evaluate_model_folds(folder, fpr_, tpr_, auc_val_, train_eval, test_eval, history):
     filename = get_model_filename('0_performance', 'mat', folder)
-    mdic = {"fpr_": fpr_, "tpr_": tpr_, "auc_val_": auc_val_, "history": history, "trainEval": trainEval, "testEval": testEval}
+    mdic = {"fpr_": fpr_, "tpr_": tpr_, "auc_val_": auc_val_, "history": history, "train_eval": train_eval, "test_eval": test_eval}
     savemat(filename, mdic)
 
     return
 
-def save_performance(folder, testEval):   
+def save_performance(folder, test_eval):
     filename = get_model_filename('0_performance', 'mat', folder)
-    mdic = { "testEval": testEval}
+    mdic = { "test_eval": test_eval}
     savemat(filename, mdic)
 
     return
